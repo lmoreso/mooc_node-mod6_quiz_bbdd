@@ -1,6 +1,4 @@
-
-
-const {log, biglog, errorlog, colorize} = require("./out");
+const { log, biglog, errorlog, colorize } = require("./out");
 
 const model = require('./model');
 
@@ -52,7 +50,7 @@ exports.showCmd = (rl, id) => {
         try {
             const quiz = model.getByIndex(id);
             log(` [${colorize(id, 'magenta')}]:  ${quiz.question} ${colorize('=>', 'magenta')} ${quiz.answer}`);
-        } catch(error) {
+        } catch (error) {
             errorlog(error.message);
         }
     }
@@ -97,7 +95,7 @@ exports.deleteCmd = (rl, id) => {
     } else {
         try {
             model.deleteByIndex(id);
-        } catch(error) {
+        } catch (error) {
             errorlog(error.message);
         }
     }
@@ -124,11 +122,11 @@ exports.editCmd = (rl, id) => {
         try {
             const quiz = model.getByIndex(id);
 
-            process.stdout.isTTY && setTimeout(() => {rl.write(quiz.question)},0);
+            process.stdout.isTTY && setTimeout(() => { rl.write(quiz.question) }, 0);
 
             rl.question(colorize(' Introduzca una pregunta: ', 'red'), question => {
 
-                process.stdout.isTTY && setTimeout(() => {rl.write(quiz.answer)},0);
+                process.stdout.isTTY && setTimeout(() => { rl.write(quiz.answer) }, 0);
 
                 rl.question(colorize(' Introduzca la respuesta ', 'red'), answer => {
                     model.update(id, question, answer);
@@ -151,10 +149,34 @@ exports.editCmd = (rl, id) => {
  * @param id Clave del quiz a probar.
  */
 exports.testCmd = (rl, id) => {
-    log('Probar el quiz indicado.', 'red');
-    rl.prompt();
+    try {
+        const quiz = model.getByIndex(id);
+
+        //process.stdout.isTTY && setTimeout(() => { rl.write(quiz.question) }, 0);
+        rl.question(colorize(`${quiz.question} > `, 'blue'), answer => {
+            if (answer.toUpperCase() === quiz.answer.toUpperCase()) {
+                log(`Su respuesta es Correcta!`, 'green')
+                biglog('Correcto!', 'green')
+            } else {
+                log('Su respuesta es Incorrecta!', 'red')
+                biglog('Incorrecto!', 'red')
+            }
+            rl.prompt();
+        });
+    } catch (error) {
+        errorlog(error.message);
+        rl.prompt();
+    }
 };
 
+
+// eslint-disable-next-line no-unused-vars
+let pintaPreguntas = (miArrayDePreguntas) => {
+    log(`El array de preguntas tiene ${miArrayDePreguntas.length} elementos:`)
+    for (let i = 0; i < miArrayDePreguntas.length; i++) {
+        log(` [${colorize(i, 'magenta')}]:  ${miArrayDePreguntas[i].question} ${colorize('=>', 'magenta')} ${miArrayDePreguntas[i].answer}`);
+    }
+}
 
 /**
  * Pregunta todos los quizzes existentes en el modelo en orden aleatorio.
@@ -163,8 +185,33 @@ exports.testCmd = (rl, id) => {
  * @param rl Objeto readline usado para implementar el CLI.
  */
 exports.playCmd = rl => {
-    log('Jugar.', 'red');
-    rl.prompt();
+    // duplico array ordenándolo de forma aleatoria
+    let misPreguntas = model.getAll().sort(function () { return Math.random() - 0.5 });
+    // pintaPreguntas(misPreguntas);
+    let indiceActual = 0;
+    let numQuiz = misPreguntas.length;
+
+    async function playQuiz() {
+        if (indiceActual < numQuiz) {
+            await rl.question(colorize(`${misPreguntas[indiceActual].question} > `, 'blue'), answer => {
+                if (answer.toUpperCase() === misPreguntas[indiceActual].answer.toUpperCase()) {
+                    log(`CORRECTO: Llevas ${indiceActual + 1} aciertos.`, 'green')
+                    indiceActual++;
+                    playQuiz();
+                } else {
+                    log('INCORRECTO!', 'red');
+                    log(`Fin del Juego. Aciertos: ${indiceActual}.`, 'red')
+                    biglog(indiceActual, 'magenta');
+                    rl.prompt();
+                }
+            });
+        } else {
+            log(`Fin del Juego. Aciertos: ${indiceActual}.`, 'green')
+            biglog(`Fin del Juego: ${indiceActual}.`, 'magenta')           
+            rl.prompt();
+        }
+    }
+    playQuiz();
 };
 
 
@@ -175,8 +222,7 @@ exports.playCmd = rl => {
  */
 exports.creditsCmd = rl => {
     log('Autores de la práctica:');
-    log('Nombre 1', 'green');
-    log('Nombre 2', 'green');
+    log('Lluis Moreso Bosch', 'green');
     rl.prompt();
 };
 

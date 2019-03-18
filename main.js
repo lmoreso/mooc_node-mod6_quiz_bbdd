@@ -1,5 +1,6 @@
 const readline = require('readline');
 
+// eslint-disable-next-line no-unused-vars
 const {log, biglog, errorlog, colorize} = require("./out");
 
 const cmds = require("./cmds");
