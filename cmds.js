@@ -2,6 +2,7 @@ const { log, biglog, errorlog, colorize } = require("./out");
 
 const model = require('./model');
 
+exports.load = () => model.load();
 
 /**
  * Muestra la ayuda.
@@ -30,10 +31,14 @@ exports.helpCmd = rl => {
  * @param rl Objeto readline usado para implementar el CLI.
  */
 exports.listCmd = rl => {
-    model.getAll().forEach((quiz, id) => {
-        log(` [${colorize(id, 'magenta')}]:  ${quiz.question}`);
-    });
-    rl.prompt();
+    model.getAll()
+        .then(quizzes => {
+            quizzes.forEach((quiz) => {
+                log(` [${colorize(quiz.id, 'magenta')}]:  ${quiz.question}`);
+            });
+        })
+        .catch(err => console.log(err))
+        .finally(() => rl.prompt());
 };
 
 
@@ -46,15 +51,25 @@ exports.listCmd = rl => {
 exports.showCmd = (rl, id) => {
     if (typeof id === "undefined") {
         errorlog(`Falta el parámetro id.`);
+        rl.prompt();
     } else {
-        try {
-            const quiz = model.getByIndex(id);
-            log(` [${colorize(id, 'magenta')}]:  ${quiz.question} ${colorize('=>', 'magenta')} ${quiz.answer}`);
-        } catch (error) {
-            errorlog(error.message);
-        }
+        model.getByIndex(id)
+            .then(
+                quiz => {
+                    //console.log(typeof quiz, quiz);
+                    if (quiz.length == 0) {
+                        errorlog(`No se ha encontrado la Pregunta con id: ${id} en la Base de Datos`);
+                    } else {
+                        log(` [${colorize(id, 'magenta')}]:  ${quiz[0].question} ${colorize('=>', 'magenta')} ${quiz[0].answer}`);
+                   }
+                },
+                error => {
+                    errorlog(error);
+                }
+            )
+            .catch(error => { errorlog(error); })
+            .finally(() => { rl.prompt(); })
     }
-    rl.prompt();
 };
 
 
@@ -207,7 +222,7 @@ exports.playCmd = rl => {
             });
         } else {
             log(`Fin del Juego. Aciertos: ${indiceActual}.`, 'green')
-            biglog(`Fin del Juego: ${indiceActual}.`, 'magenta')           
+            biglog(`Fin del Juego: ${indiceActual}.`, 'magenta')
             rl.prompt();
         }
     }
