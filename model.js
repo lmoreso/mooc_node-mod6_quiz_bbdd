@@ -1,15 +1,19 @@
 // Definir a Base de datos 
 const Sequelize = require('sequelize');
-const options = { logging: false, operatorsAliases: false };
-const quizzesdb = new Sequelize("sqlite:quizzesdb.sqlite", options);
+const options = {
+    logging: false,
+    operatorsAliases: false
+};
+const quizzesdb = new Sequelize("sqlite:quizzes.sqlite", options);
 
 // Definir la tabla
 quizzesdb.define(
-    'quizzes',
-    {
+    'quizzes', {
         question: {
             type: Sequelize.STRING,
-            unique: { msg: "Question already exists" },
+            unique: {
+                msg: "Question already exists"
+            },
             allowNull: false,
         },
         answer: {
@@ -23,8 +27,7 @@ quizzesdb.define(
 const tquizzes = quizzesdb.models.quizzes
 
 // Valores iniciales
-let quizzesBulk = [
-    {
+let quizzesBulk = [{
         question: "Capital de Italia",
         answer: "Roma"
     },
@@ -68,12 +71,10 @@ exports.load = () => {
                     if (count === 0) {
                         tquizzes.bulkCreate(quizzesBulk)
                             .then(c => {
-                                console.log(`  DB created with ${c.length} elems`);
-                                resolver();
+                                resolver(`  DB created with ${c.length} elems`);
                             });
                     } else {
-                        console.log(`  DB exists & has ${count} elems`);
-                        resolver();
+                        resolver(`  DB exists & has ${count} elems`);
                     }
 
                 })
@@ -99,7 +100,11 @@ exports.getAll = () => tquizzes.findAll();
  * @param id Clave que identifica el quiz a devolver.
  *
  */
-exports.getByIndex = ident => tquizzes.findAll({where:{id: ident}});
+exports.getByIndex = id => tquizzes.findAll({
+    where: {
+        id
+    }
+});
 
 
 /**
@@ -110,40 +115,25 @@ exports.getByIndex = ident => tquizzes.findAll({where:{id: ident}});
 exports.count = () => tquizzes.count();
 
 /**
- *  Guarda las preguntas en el fichero.
- *
- *  Guarda en formatro JSON el valor de quizzes en el fichero DB_FILENAME.
- *  Si se produce algún tipo de error, se lanza una excepción que abortará
- *  la ejecución del programa.
- */
-const save = () => {
-
-    fs.writeFile(DB_FILENAME,
-        JSON.stringify(tquizzes),
-        err => {
-            if (err) throw err;
-        });
-};
-
-
-
-//
-
-/**
  * Añade un nuevo quiz.
- *
+ * Devuelve una promesa
  * @param question String con la pregunta.
  * @param answer   String con la respuesta.
  */
 exports.add = (question, answer) => {
-
-    tquizzes.push({
-        question: (question || "").trim(),
-        answer: (answer || "").trim()
-    });
-    save();
-};
-
+    return (
+        new Promise(function (resolver, rechazar) {
+            tquizzes.create({
+                    question,
+                    answer
+                })
+                .then((nuevoReg) =>
+                    resolver(nuevoReg)
+                )
+                .catch(err => rechazar(`${err}`))
+        })
+    );
+}
 
 
 /**
@@ -152,36 +142,46 @@ exports.add = (question, answer) => {
  * @param id       Clave que identifica el quiz a actualizar.
  * @param question String con la pregunta.
  * @param answer   String con la respuesta.
+ * @returns Promise<mensaje>
  */
 exports.update = (id, question, answer) => {
 
-    const quiz = tquizzes[id];
-    if (typeof quiz === "undefined") {
-        throw new Error(`El valor del parámetro id no es válido.`);
-    }
-    tquizzes.splice(id, 1, {
-        question: (question || "").trim(),
-        answer: (answer || "").trim()
-    });
-    save();
+    return (
+        new Promise(function (resolver, rechazar) {
+            tquizzes.update({
+                    question,
+                    answer
+                }, {
+                    where: {
+                        id
+                    }
+                })
+                .then(n => {
+                    if (n[0] !== 0) {
+                        resolver(`Se ha(n) actualizado ${n[0]} registro(s)`)
+                    } else {
+                        rechazar(`El registro nº [${id}] no está en la DB`)
+                    }
+                })
+                .catch(err => rechazar(`${err}`));
+        })
+    );
 };
 
 
 
 //
 /**
- * Elimina el quiz situado en la posición dada.
+ * Elimina el quiz con el id dado.
  *
  * @param id Clave que identifica el quiz a borrar.
+ * 
+ * @returns Promise<num-registros-borrados>
  */
 exports.deleteByIndex = id => {
-
-    const quiz = tquizzes[id];
-    if (typeof quiz === "undefined") {
-        throw new Error(`El valor del parámetro id no es válido.`);
-    }
-    tquizzes.splice(id, 1);
-    save();
+    return (tquizzes.destroy({
+        where: {
+            id
+        }
+    }))
 };
-
-

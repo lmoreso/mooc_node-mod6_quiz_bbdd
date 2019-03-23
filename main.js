@@ -1,7 +1,12 @@
 const readline = require('readline');
 
 // eslint-disable-next-line no-unused-vars
-const { log, biglog, errorlog, colorize } = require("./out");
+const {
+    log,
+    biglog,
+    errorlog,
+    colorize
+} = require("./out");
 
 const cmds = require("./cmds");
 
@@ -23,7 +28,8 @@ const rl = readline.createInterface({
 });
 
 cmds.load()
-    .then(function () {
+    .then((mensage) => {
+        log(mensage);
         rl.prompt();
 
         rl
@@ -48,6 +54,7 @@ cmds.load()
                         break;
 
                     case 'add':
+                    case 'a':
                         cmds.addCmd(rl);
                         break;
 
@@ -89,10 +96,10 @@ cmds.load()
                 }
             })
             .on('close', () => {
-                log('Adios!');
+                biglog('Adios!', 'green');
                 process.exit(0);
             });
 
 
     })
-    .catch(e => console.log(e));
+    .catch(e => errorlog(e));
